@@ -1,79 +1,90 @@
 package org.example;
 
+import jakarta.persistence.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.util.Optional;
 
 @SpringBootApplication
 @RestController
 public class TaskAPI {
 
+    @Autowired
+    private TaskRepository taskRepository;
+
+    @Entity
     public static class Task {
-        private int id;
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private Long id;
         private String title;
         private String description;
 
-
-        public Task(int id, String title, String description) {
-            this.id = id;
+        public Task(String title, String description) {
             this.title = title;
             this.description = description;
-
         }
 
-
-        public void setId(int id) {
-            this.id = id;
+        public Task() {
         }
 
-        public int getId() {
+        public Long getId() {
             return id;
         }
 
-        public String getTitle(){return title;}
+        public String getTitle() {
+            return title;
+        }
 
-        public String getDescription(){return description;}
+        public String getDescription() {
+            return description;
+        }
 
-    }
+        public void setTitle(String title) {
+            this.title = title;
+        }
 
-
-    private List<Task> tasks = new ArrayList<>();
-
-    public TaskAPI() {
-        tasks.add(new Task(1, "Задание №1", "Описание задания №1"));
-        tasks.add(new Task(2, "Задание №2", "Описание задания №2"));
-        tasks.add(new Task(3, "Задание №3", "Описание задания №3"));
-
+        public void setDescription(String description) {
+            this.description = description;
+        }
     }
 
     // Получение задания по id
     @GetMapping("/tasks/{taskId}")
-    public Task getTask(@PathVariable int taskId) {
-        return tasks.stream()
-                .filter(task -> task.getId() == taskId)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Задание не найдено"));
+    public Task getTask(@PathVariable Long taskId) {
+        return taskRepository.findById(taskId).orElse(null);
     }
 
     // Получение всех заданий
     @GetMapping("/tasks")
     public List<Task> getTasks() {
-        return tasks;
+        return taskRepository.findAll();
     }
 
-    //добавление задания
+    // Добавление нового задания
     @PostMapping("/tasks")
     public Task createTask(@RequestBody Task newTask) {
-        newTask.setId(tasks.size() + 1);
-        tasks.add(newTask);
-        return newTask;
+        return taskRepository.save(newTask);
+    }
+
+    // Удаление задания по id
+    @DeleteMapping("/tasks/{taskId}")
+    public String deleteTaskById(@PathVariable Long taskId) {
+        Optional<Task> taskToDelete = taskRepository.findById(taskId);
+
+        if (taskToDelete.isPresent()) {
+            Task task = taskToDelete.get();
+            taskRepository.deleteById(taskId);
+            return "Удалена задача с id: " + task.getId() + " и названием: " + task.getTitle();
+        } else {
+            return "Задача с id " + taskId + " не найдена.";
+        }
     }
 
     public static void main(String[] args) {
         SpringApplication.run(TaskAPI.class, args);
     }
 }
-
